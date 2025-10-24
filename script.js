@@ -21,7 +21,7 @@ let journalEntries = [];
 let rewards = [];
 let victories = [];
 let pomodoroCount = 0;
-let currentUser = null;
+let currentUser = null; // We still need this to know if we are authenticated
 
 // DOM Elements
 const pageLinks = document.querySelectorAll('.nav-link');
@@ -91,7 +91,6 @@ let isWorkMode = true;
 // Initialize the app
 function initializeApp() {
   // SET UP LISTENERS IMMEDIATELY
-  // This ensures the nav links and buttons work right away.
   setupEventListeners();
 
   // Wait for Firebase to be loaded
@@ -104,16 +103,14 @@ function initializeApp() {
     // Set up authentication state listener
     firebaseFunctions.onAuthStateChanged(firebaseAuth, (user) => {
       if (user) {
-        currentUser = user;
-        // Load data from Firestore
-        loadFromFirestore();
+        currentUser = user; // Set current user
+        loadFromFirestore(); // Load global data
       } else {
         // Sign in anonymously
         firebaseFunctions.signInAnonymously(firebaseAuth).catch((error) => {
           console.error('Anonymous sign-in error:', error);
         });
       }
-      // DO NOT set up listeners here
     });
   } else {
     console.warn('Firebase not loaded, using localStorage');
@@ -125,11 +122,9 @@ function initializeApp() {
     renderRewards();
     renderVictories();
     updateProgressPage();
-    
-    // Listeners are already set up
   }
   
-  // Make functions globally accessible for inline event handlers
+  // Make functions globally accessible
   window.toggleQuest = toggleQuest;
   window.deleteQuest = deleteQuest;
   window.deleteJournalEntry = deleteJournalEntry;
@@ -188,7 +183,7 @@ function showPage(pageName) {
 function updateDashboard() {
   userLevelEl.textContent = userStats.level;
   totalXPEl.textContent = userStats.totalXP;
-  streakEl.textContent = `${userStats.streak} days`;
+  streakEl.textContent = ${userStats.streak} days;
   
   // Update attributes
   strengthValueEl.textContent = userStats.attributes.strength;
@@ -197,14 +192,14 @@ function updateDashboard() {
   wisdomValueEl.textContent = userStats.attributes.wisdom;
   
   // Update progress bars (max 100 for display)
-  strengthProgressEl.style.width = `${Math.min(100, userStats.attributes.strength)}%`;
-  charismaProgressEl.style.width = `${Math.min(100, userStats.attributes.charisma)}%`;
-  intelligenceProgressEl.style.width = `${Math.min(100, userStats.attributes.intelligence)}%`;
-  wisdomProgressEl.style.width = `${Math.min(100, userStats.attributes.wisdom)}%`;
+  strengthProgressEl.style.width = ${Math.min(100, userStats.attributes.strength)}%;
+  charismaProgressEl.style.width = ${Math.min(100, userStats.attributes.charisma)}%;
+  intelligenceProgressEl.style.width = ${Math.min(100, userStats.attributes.intelligence)}%;
+  wisdomProgressEl.style.width = ${Math.min(100, userStats.attributes.wisdom)}%;
   
   // Update quests completed
   const completedQuests = quests.filter(quest => quest.completed).length;
-  questsCompletedEl.textContent = `${completedQuests}/${quests.length}`;
+  questsCompletedEl.textContent = ${completedQuests}/${quests.length};
 }
 
 async function addQuest() {
@@ -214,10 +209,10 @@ async function addQuest() {
   
   if (title && !isNaN(xp) && xp > 0) {
     if (currentUser) {
-      // Save to Firestore
+      // Save to Firestore (GLOBAL path)
       try {
         const docRef = await firebaseFunctions.addDoc(
-          firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'quests'),
+          firebaseFunctions.collection(firebaseDB, 'global_quests'), // CHANGED
           {
             title,
             attribute,
@@ -261,7 +256,7 @@ function renderQuests() {
   
   quests.forEach(quest => {
     const questEl = document.createElement('div');
-    questEl.className = `quest-item ${quest.attribute}`;
+    questEl.className = quest-item ${quest.attribute};
     questEl.innerHTML = `
       <div class="quest-info">
         <div class="quest-title">${quest.title}</div>
@@ -283,14 +278,14 @@ function renderQuests() {
   // Add event listeners to the buttons
   document.querySelectorAll('.quest-actions .complete-btn').forEach(button => {
     button.addEventListener('click', (e) => {
-      const id = e.target.getAttribute('data-id'); // Use getAttribute for string ID
+      const id = e.target.getAttribute('data-id'); 
       toggleQuest(id);
     });
   });
   
   document.querySelectorAll('.quest-actions .delete-btn').forEach(button => {
     button.addEventListener('click', (e) => {
-      const id = e.target.getAttribute('data-id'); // Use getAttribute for string ID
+      const id = e.target.getAttribute('data-id'); 
       deleteQuest(id);
     });
   });
@@ -298,9 +293,9 @@ function renderQuests() {
 
 async function toggleQuest(id) {
   if (currentUser) {
-    // Update in Firestore
+    // Update in Firestore (GLOBAL path)
     try {
-      const questRef = firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'quests', id);
+      const questRef = firebaseFunctions.doc(firebaseDB, 'global_quests', id); // CHANGED
       const quest = quests.find(q => q.id === id);
       
       if (quest) {
@@ -311,41 +306,35 @@ async function toggleQuest(id) {
         
         // Update local stats
         if (newCompletedStatus) {
-          // Add XP and attribute points
           userStats.totalXP += quest.xp;
           userStats.attributes[quest.attribute] += quest.xp;
-          userStats.level = calculateLevel(userStats.totalXP);
         } else {
-          // Remove XP and attribute points
           userStats.totalXP -= quest.xp;
           userStats.attributes[quest.attribute] -= quest.xp;
-          userStats.level = calculateLevel(userStats.totalXP);
         }
+        userStats.level = calculateLevel(userStats.totalXP);
         
         updateDashboard();
         updateProgressPage();
-        saveToFirestore();
+        saveToFirestore(); // Save global stats
       }
     } catch (error) {
       console.error('Error updating quest: ', error);
     }
   } else {
     // Fallback to localStorage
-    const quest = quests.find(q => q.id === parseInt(id)); // LocalStorage uses numeric ID
+    const quest = quests.find(q => q.id === parseInt(id));
     if (quest) {
       quest.completed = !quest.completed;
       
       if (quest.completed) {
-        // Add XP and attribute points
         userStats.totalXP += quest.xp;
         userStats.attributes[quest.attribute] += quest.xp;
-        userStats.level = calculateLevel(userStats.totalXP);
       } else {
-        // Remove XP and attribute points
         userStats.totalXP -= quest.xp;
         userStats.attributes[quest.attribute] -= quest.xp;
-        userStats.level = calculateLevel(userStats.totalXP);
       }
+      userStats.level = calculateLevel(userStats.totalXP);
       
       updateDashboard();
       renderQuests();
@@ -357,17 +346,17 @@ async function toggleQuest(id) {
 
 async function deleteQuest(id) {
   if (currentUser) {
-    // Delete from Firestore
+    // Delete from Firestore (GLOBAL path)
     try {
       await firebaseFunctions.deleteDoc(
-        firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'quests', id)
+        firebaseFunctions.doc(firebaseDB, 'global_quests', id) // CHANGED
       );
     } catch (error) {
       console.error('Error deleting quest: ', error);
     }
   } else {
     // Fallback to localStorage
-    quests = quests.filter(quest => quest.id !== parseInt(id)); // LocalStorage uses numeric ID
+    quests = quests.filter(quest => quest.id !== parseInt(id));
     renderQuests();
     saveToLocalStorage();
   }
@@ -384,7 +373,6 @@ function getAttributeName(attribute) {
 }
 
 function calculateLevel(xp) {
-  // Simple level calculation: level = sqrt(xp / 100) + 1
   return Math.floor(Math.sqrt(xp / 100)) + 1;
 }
 
@@ -410,26 +398,20 @@ function startTimer() {
       isRunning = false;
       startPauseBtn.textContent = 'Start';
       
-      // Timer completed
       if (isWorkMode) {
-        // Work session completed
         pomodoroCount++;
         if (currentUser) {
-          // Save to Firestore
-          savePomodoroCount();
+          savePomodoroCount(); // Save global count
         } else {
-          // Save to localStorage
           saveToLocalStorage();
         }
         pomodoroCountEl.textContent = pomodoroCount;
         isWorkMode = false;
-        timeLeft = 5 * 60; // 5 minutes break
+        timeLeft = 5 * 60; 
         timerModeEl.textContent = 'Break Time';
-        // In a real app, you might play a sound or show a notification here
       } else {
-        // Break completed
         isWorkMode = true;
-        timeLeft = 25 * 60; // 25 minutes work
+        timeLeft = 25 * 60; 
         timerModeEl.textContent = 'Work Time';
       }
       
@@ -451,7 +433,6 @@ function resetTimer() {
   timerModeEl.textContent = 'Work Time';
   updatePomodoroDisplay();
   
-  // Save to Firebase or localStorage
   if (currentUser) {
     savePomodoroCount();
   } else {
@@ -462,12 +443,11 @@ function resetTimer() {
 function updatePomodoroDisplay() {
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
-  timerEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  timerEl.textContent = ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')};
   
-  // Update progress bar
   const totalTime = isWorkMode ? 25 * 60 : 5 * 60;
   const progress = ((totalTime - timeLeft) / totalTime) * 100;
-  timerProgressEl.style.width = `${progress}%`;
+  timerProgressEl.style.width = ${progress}%;
 }
 
 // Journal Functions
@@ -477,10 +457,10 @@ async function saveJournalEntry() {
   
   if (title && content) {
     if (currentUser) {
-      // Save to Firestore
+      // Save to Firestore (GLOBAL path)
       try {
         const docRef = await firebaseFunctions.addDoc(
-          firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'journal'),
+          firebaseFunctions.collection(firebaseDB, 'global_journal'), // CHANGED
           {
             title,
             content,
@@ -504,7 +484,7 @@ async function saveJournalEntry() {
         timestamp: new Date().toLocaleString()
       };
       
-      journalEntries.unshift(entry); // Add to beginning
+      journalEntries.unshift(entry); 
       renderJournalEntries();
       saveToLocalStorage();
     }
@@ -543,7 +523,7 @@ function renderJournalEntries() {
     journalEntriesEl.appendChild(entryEl);
   });
   
-  // Add event listeners to the delete buttons
+  // Add event listeners
   document.querySelectorAll('.journal-entry .delete-btn').forEach(button => {
     button.addEventListener('click', (e) => {
       const id = e.target.getAttribute('data-id');
@@ -554,10 +534,10 @@ function renderJournalEntries() {
 
 async function deleteJournalEntry(id) {
   if (currentUser) {
-    // Delete from Firestore
+    // Delete from Firestore (GLOBAL path)
     try {
       await firebaseFunctions.deleteDoc(
-        firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'journal', id)
+        firebaseFunctions.doc(firebaseDB, 'global_journal', id) // CHANGED
       );
     } catch (error) {
       console.error('Error deleting journal entry: ', error);
@@ -578,10 +558,10 @@ async function createReward() {
   
   if (name && description && !isNaN(xp) && xp > 0) {
     if (currentUser) {
-      // Save to Firestore
+      // Save to Firestore (GLOBAL path)
       try {
         const docRef = await firebaseFunctions.addDoc(
-          firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'rewards'),
+          firebaseFunctions.collection(firebaseDB, 'global_rewards'), // CHANGED
           {
             name,
             description,
@@ -638,7 +618,7 @@ function renderRewards() {
     rewardsListEl.appendChild(rewardEl);
   });
   
-  // Add event listeners to the delete buttons
+  // Add event listeners
   document.querySelectorAll('.reward-actions .delete-btn').forEach(button => {
     button.addEventListener('click', (e) => {
       const id = e.target.getAttribute('data-id');
@@ -649,10 +629,10 @@ function renderRewards() {
 
 async function deleteReward(id) {
   if (currentUser) {
-    // Delete from Firestore
+    // Delete from Firestore (GLOBAL path)
     try {
       await firebaseFunctions.deleteDoc(
-        firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'rewards', id)
+        firebaseFunctions.doc(firebaseDB, 'global_rewards', id) // CHANGED
       );
     } catch (error) {
       console.error('Error deleting reward: ', error);
@@ -673,10 +653,10 @@ async function recordVictory() {
   
   if (title && !isNaN(xp) && xp > 0) {
     if (currentUser) {
-      // Save to Firestore
+      // Save to Firestore (GLOBAL path)
       try {
         const docRef = await firebaseFunctions.addDoc(
-          firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'victories'),
+          firebaseFunctions.collection(firebaseDB, 'global_victories'), // CHANGED
           {
             title,
             attribute,
@@ -700,7 +680,7 @@ async function recordVictory() {
         timestamp: new Date().toLocaleDateString()
       };
       
-      victories.unshift(victory); // Add to beginning
+      victories.unshift(victory); 
       renderVictories();
       saveToLocalStorage();
     }
@@ -738,7 +718,7 @@ function renderVictories() {
     victoriesListEl.appendChild(victoryEl);
   });
   
-  // Add event listeners to the delete buttons
+  // Add event listeners
   document.querySelectorAll('.victory-card .delete-btn').forEach(button => {
     button.addEventListener('click', (e) => {
       const id = e.target.getAttribute('data-id');
@@ -749,10 +729,10 @@ function renderVictories() {
 
 async function deleteVictory(id) {
   if (currentUser) {
-    // Delete from Firestore
+    // Delete from Firestore (GLOBAL path)
     try {
       await firebaseFunctions.deleteDoc(
-        firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'victories', id)
+        firebaseFunctions.doc(firebaseDB, 'global_victories', id) // CHANGED
       );
     } catch (error) {
       console.error('Error deleting victory: ', error);
@@ -783,16 +763,16 @@ async function loadFromFirestore() {
   if (!currentUser) return;
   
   try {
-    // Load user stats
-    const statsDocRef = firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'stats', 'current');
+    // Load user stats (GLOBAL path)
+    const statsDocRef = firebaseFunctions.doc(firebaseDB, 'global_data', 'stats'); // CHANGED
     const statsDoc = await firebaseFunctions.getDoc(statsDocRef);
     
     if (statsDoc.exists()) {
       userStats = statsDoc.data();
     }
     
-    // Load pomodoro count
-    const pomodoroDocRef = firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'stats', 'pomodoro');
+    // Load pomodoro count (GLOBAL path)
+    const pomodoroDocRef = firebaseFunctions.doc(firebaseDB, 'global_data', 'pomodoro'); // CHANGED
     const pomodoroDoc = await firebaseFunctions.getDoc(pomodoroDocRef);
     
     if (pomodoroDoc.exists()) {
@@ -810,12 +790,8 @@ async function loadFromFirestore() {
     
   } catch (error) {
     console.error('Error loading data from Firestore:', error);
-    // Fallback to localStorage
     loadFromLocalStorage();
-    
-    // Update UI even if fallback is used
     updateDashboard();
-    // --- THIS IS THE FIXED LINE ---
     updatePomodoroDisplay();
     updateProgressPage();
   }
@@ -824,31 +800,30 @@ async function loadFromFirestore() {
 function setupRealtimeListeners() {
   if (!currentUser) return;
   
-  // Quests listener
-  const questsQuery = firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'quests');
+  // Quests listener (GLOBAL path)
+  const questsQuery = firebaseFunctions.collection(firebaseDB, 'global_quests'); // CHANGED
   unsubscribeQuests = firebaseFunctions.onSnapshot(questsQuery, (snapshot) => {
     quests = [];
     snapshot.forEach((doc) => {
       quests.push({ id: doc.id, ...doc.data() });
     });
     renderQuests();
-    updateDashboard(); // Update quest count
+    updateDashboard(); 
   });
   
-  // Journal entries listener
-  const journalQuery = firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'journal');
+  // Journal entries listener (GLOBAL path)
+  const journalQuery = firebaseFunctions.collection(firebaseDB, 'global_journal'); // CHANGED
   unsubscribeJournal = firebaseFunctions.onSnapshot(journalQuery, (snapshot) => {
     journalEntries = [];
     snapshot.forEach((doc) => {
       journalEntries.push({ id: doc.id, ...doc.data() });
     });
-    // Sort by timestamp (newest first)
     journalEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
     renderJournalEntries();
   });
   
-  // Rewards listener
-  const rewardsQuery = firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'rewards');
+  // Rewards listener (GLOBAL path)
+  const rewardsQuery = firebaseFunctions.collection(firebaseDB, 'global_rewards'); // CHANGED
   unsubscribeRewards = firebaseFunctions.onSnapshot(rewardsQuery, (snapshot) => {
     rewards = [];
     snapshot.forEach((doc) => {
@@ -857,14 +832,13 @@ function setupRealtimeListeners() {
     renderRewards();
   });
   
-  // Victories listener
-  const victoriesQuery = firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'victories');
+  // Victories listener (GLOBAL path)
+  const victoriesQuery = firebaseFunctions.collection(firebaseDB, 'global_victories'); // CHANGED
   unsubscribeVictories = firebaseFunctions.onSnapshot(victoriesQuery, (snapshot) => {
     victories = [];
     snapshot.forEach((doc) => {
       victories.push({ id: doc.id, ...doc.data() });
     });
-    // Sort by timestamp (newest first)
     victories.sort((a, b) => new Date(b.date) - new Date(a.date));
     renderVictories();
   });
@@ -874,8 +848,8 @@ async function saveToFirestore() {
   if (!currentUser) return;
   
   try {
-    // Save user stats
-    const statsRef = firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'stats', 'current');
+    // Save user stats (GLOBAL path)
+    const statsRef = firebaseFunctions.doc(firebaseDB, 'global_data', 'stats'); // CHANGED
     await firebaseFunctions.setDoc(statsRef, {
       ...userStats,
       timestamp: new Date()
@@ -889,8 +863,8 @@ async function savePomodoroCount() {
   if (!currentUser) return;
   
   try {
-    // Save pomodoro count
-    const pomodoroRef = firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'stats', 'pomodoro');
+    // Save pomodoro count (GLOBAL path)
+    const pomodoroRef = firebaseFunctions.doc(firebaseDB, 'global_data', 'pomodoro'); // CHANGED
     await firebaseFunctions.setDoc(pomodoroRef, {
       count: pomodoroCount,
       timestamp: new Date()
@@ -924,7 +898,6 @@ function loadFromLocalStorage() {
     victories = parsed.victories || victories;
     pomodoroCount = parsed.pomodoroCount || pomodoroCount;
     
-    // Update pomodoro count display
     pomodoroCountEl.textContent = pomodoroCount;
   }
 }
