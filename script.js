@@ -90,6 +90,10 @@ let isWorkMode = true;
 
 // Initialize the app
 function initializeApp() {
+  // SET UP LISTENERS IMMEDIATELY
+  // This ensures the nav links and buttons work right away.
+  setupEventListeners();
+
   // Wait for Firebase to be loaded
   if (typeof window.firebaseFunctions !== 'undefined') {
     firebaseApp = window.firebaseApp;
@@ -109,8 +113,7 @@ function initializeApp() {
           console.error('Anonymous sign-in error:', error);
         });
       }
-      // Set up event listeners for both authenticated and unauthenticated users
-      setupEventListeners();
+      // DO NOT set up listeners here
     });
   } else {
     console.warn('Firebase not loaded, using localStorage');
@@ -123,8 +126,7 @@ function initializeApp() {
     renderVictories();
     updateProgressPage();
     
-    // Set up event listeners
-    setupEventListeners();
+    // Listeners are already set up
   }
   
   // Make functions globally accessible for inline event handlers
@@ -281,14 +283,14 @@ function renderQuests() {
   // Add event listeners to the buttons
   document.querySelectorAll('.quest-actions .complete-btn').forEach(button => {
     button.addEventListener('click', (e) => {
-      const id = parseInt(e.target.getAttribute('data-id'));
+      const id = e.target.getAttribute('data-id'); // Use getAttribute for string ID
       toggleQuest(id);
     });
   });
   
   document.querySelectorAll('.quest-actions .delete-btn').forEach(button => {
     button.addEventListener('click', (e) => {
-      const id = parseInt(e.target.getAttribute('data-id'));
+      const id = e.target.getAttribute('data-id'); // Use getAttribute for string ID
       deleteQuest(id);
     });
   });
@@ -329,7 +331,7 @@ async function toggleQuest(id) {
     }
   } else {
     // Fallback to localStorage
-    const quest = quests.find(q => q.id === id);
+    const quest = quests.find(q => q.id === parseInt(id)); // LocalStorage uses numeric ID
     if (quest) {
       quest.completed = !quest.completed;
       
@@ -365,7 +367,7 @@ async function deleteQuest(id) {
     }
   } else {
     // Fallback to localStorage
-    quests = quests.filter(quest => quest.id !== id);
+    quests = quests.filter(quest => quest.id !== parseInt(id)); // LocalStorage uses numeric ID
     renderQuests();
     saveToLocalStorage();
   }
@@ -544,7 +546,7 @@ function renderJournalEntries() {
   // Add event listeners to the delete buttons
   document.querySelectorAll('.journal-entry .delete-btn').forEach(button => {
     button.addEventListener('click', (e) => {
-      const id = parseInt(e.target.getAttribute('data-id'));
+      const id = e.target.getAttribute('data-id');
       deleteJournalEntry(id);
     });
   });
@@ -562,7 +564,7 @@ async function deleteJournalEntry(id) {
     }
   } else {
     // Fallback to localStorage
-    journalEntries = journalEntries.filter(entry => entry.id !== id);
+    journalEntries = journalEntries.filter(entry => entry.id !== parseInt(id));
     renderJournalEntries();
     saveToLocalStorage();
   }
@@ -639,7 +641,7 @@ function renderRewards() {
   // Add event listeners to the delete buttons
   document.querySelectorAll('.reward-actions .delete-btn').forEach(button => {
     button.addEventListener('click', (e) => {
-      const id = parseInt(e.target.getAttribute('data-id'));
+      const id = e.target.getAttribute('data-id');
       deleteReward(id);
     });
   });
@@ -657,7 +659,7 @@ async function deleteReward(id) {
     }
   } else {
     // Fallback to localStorage
-    rewards = rewards.filter(reward => reward.id !== id);
+    rewards = rewards.filter(reward => reward.id !== parseInt(id));
     renderRewards();
     saveToLocalStorage();
   }
@@ -739,7 +741,7 @@ function renderVictories() {
   // Add event listeners to the delete buttons
   document.querySelectorAll('.victory-card .delete-btn').forEach(button => {
     button.addEventListener('click', (e) => {
-      const id = parseInt(e.target.getAttribute('data-id'));
+      const id = e.target.getAttribute('data-id');
       deleteVictory(id);
     });
   });
@@ -757,7 +759,7 @@ async function deleteVictory(id) {
     }
   } else {
     // Fallback to localStorage
-    victories = victories.filter(victory => victory.id !== id);
+    victories = victories.filter(victory => victory.id !== parseInt(id));
     renderVictories();
     saveToLocalStorage();
   }
@@ -782,21 +784,16 @@ async function loadFromFirestore() {
   
   try {
     // Load user stats
-    const statsQuery = firebaseFunctions.query(
-      firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'stats'),
-      firebaseFunctions.orderBy('timestamp', 'desc'),
-      firebaseFunctions.limit(1)
-    );
+    const statsDocRef = firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'stats', 'current');
+    const statsDoc = await firebaseFunctions.getDoc(statsDocRef);
     
-    const statsSnapshot = await firebaseFunctions.getDocs(statsQuery);
-    if (!statsSnapshot.empty) {
-      userStats = statsSnapshot.docs[0].data();
+    if (statsDoc.exists()) {
+      userStats = statsDoc.data();
     }
     
     // Load pomodoro count
-    const pomodoroDoc = await firebaseFunctions.getDoc(
-      firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'stats', 'pomodoro')
-    );
+    const pomodoroDocRef = firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'stats', 'pomodoro');
+    const pomodoroDoc = await firebaseFunctions.getDoc(pomodoroDocRef);
     
     if (pomodoroDoc.exists()) {
       pomodoroCount = pomodoroDoc.data().count;
@@ -811,12 +808,16 @@ async function loadFromFirestore() {
     updatePomodoroDisplay();
     updateProgressPage();
     
-    // Set up event listeners
-    setupEventListeners();
   } catch (error) {
     console.error('Error loading data from Firestore:', error);
     // Fallback to localStorage
     loadFromLocalStorage();
+    
+    // Update UI even if fallback is used
+    updateDashboard();
+    // --- THIS IS THE FIXED LINE ---
+    updatePomodoroDisplay();
+    updateProgressPage();
   }
 }
 
@@ -831,6 +832,7 @@ function setupRealtimeListeners() {
       quests.push({ id: doc.id, ...doc.data() });
     });
     renderQuests();
+    updateDashboard(); // Update quest count
   });
   
   // Journal entries listener
@@ -926,3 +928,6 @@ function loadFromLocalStorage() {
     pomodoroCountEl.textContent = pomodoroCount;
   }
 }
+
+// Initialize the app
+initializeApp();

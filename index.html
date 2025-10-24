@@ -9,12 +9,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Firebase SDK -->
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+        // --- UPDATED IMPORTS ---
+        import { 
+            getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, onSnapshot, 
+            query, orderBy, limit, getDoc, setDoc 
+        } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
     
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -36,6 +39,7 @@
         window.firebaseAuth = auth;
         window.firebaseDB = db;
         
+        // --- UPDATED FUNCTIONS ---
         // Expose Firebase functions globally
         window.firebaseFunctions = {
             initializeApp,
@@ -50,15 +54,13 @@
             updateDoc,
             deleteDoc,
             doc,
-            onSnapshot
+            onSnapshot,
+            query, 
+            orderBy, 
+            limit, 
+            getDoc, 
+            setDoc
         };
-        
-        // Initialize the app after Firebase is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof initializeApp === 'function') {
-                initializeApp();
-            }
-        });
     </script>
     <div class="container">
         <header>
@@ -76,7 +78,6 @@
         </header>
 
         <main class="main-content">
-            <!-- Dashboard Page -->
             <section id="dashboard" class="page active">
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -112,8 +113,7 @@
                             <button id="add-quest">Add Quest</button>
                         </div>
                         <div class="quests-list" id="quests-list">
-                            <!-- Quests will be added here dynamically -->
-                        </div>
+                            </div>
                     </div>
 
                     <div class="attributes-section">
@@ -160,7 +160,6 @@
                 </div>
             </section>
 
-            <!-- Pomodoro Timer Page -->
             <section id="pomodoro" class="page">
                 <h2>Pomodoro Timer</h2>
                 <div class="timer-container">
@@ -184,7 +183,6 @@
                 </div>
             </section>
 
-            <!-- Journal Page -->
             <section id="journal" class="page">
                 <h2>Journal</h2>
                 <div class="journal-form">
@@ -198,11 +196,9 @@
                     </div>
                 </div>
                 <div class="journal-entries" id="journal-entries">
-                    <!-- Journal entries will be added here dynamically -->
-                </div>
+                    </div>
             </section>
 
-            <!-- Rewards Page -->
             <section id="rewards" class="page">
                 <h2>Create Rewards</h2>
                 <div class="reward-form">
@@ -212,11 +208,9 @@
                     <button id="create-reward">Create Reward</button>
                 </div>
                 <div class="rewards-list" id="rewards-list">
-                    <!-- Rewards will be added here dynamically -->
-                </div>
+                    </div>
             </section>
 
-            <!-- Hall of Shadows Page -->
             <section id="hall" class="page">
                 <h2>Hall of Shadows</h2>
                 <div class="victory-form">
@@ -231,11 +225,9 @@
                     <button id="record-victory">Record Victory</button>
                 </div>
                 <div class="victories-list" id="victories-list">
-                    <!-- Victories will be added here dynamically -->
-                </div>
+                    </div>
             </section>
 
-            <!-- Progress Page -->
             <section id="progress" class="page">
                 <h2>Progress Overview</h2>
                 <div class="progress-stats">
@@ -256,14 +248,12 @@
                     <div class="chart-placeholder">
                         <h3>XP Gain Over Time</h3>
                         <div class="chart" id="xp-chart">
-                            <!-- Chart will be rendered here -->
                             <p>Chart visualization would appear here</p>
                         </div>
                     </div>
                     <div class="chart-placeholder">
                         <h3>Attribute Distribution</h3>
                         <div class="chart" id="attribute-chart">
-                            <!-- Chart will be rendered here -->
                             <p>Chart visualization would appear here</p>
                         </div>
                     </div>
@@ -272,6 +262,6 @@
         </main>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js" type="module"></script>
 </body>
 </html>
