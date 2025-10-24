@@ -109,6 +109,8 @@ function initializeApp() {
           console.error('Anonymous sign-in error:', error);
         });
       }
+      // Set up event listeners for both authenticated and unauthenticated users
+      setupEventListeners();
     });
   } else {
     console.warn('Firebase not loaded, using localStorage');
@@ -124,6 +126,13 @@ function initializeApp() {
     // Set up event listeners
     setupEventListeners();
   }
+  
+  // Make functions globally accessible for inline event handlers
+  window.toggleQuest = toggleQuest;
+  window.deleteQuest = deleteQuest;
+  window.deleteJournalEntry = deleteJournalEntry;
+  window.deleteReward = deleteReward;
+  window.deleteVictory = deleteVictory;
 }
 
 // Set up event listeners
@@ -260,13 +269,28 @@ function renderQuests() {
         </div>
       </div>
       <div class="quest-actions">
-        <button class="${quest.completed ? 'completed' : ''}" onclick="toggleQuest(${quest.id})">
+        <button class="complete-btn ${quest.completed ? 'completed' : ''}" data-id="${quest.id}">
           ${quest.completed ? 'Completed' : 'Complete'}
         </button>
-        <button class="delete-btn" onclick="deleteQuest(${quest.id})">Delete</button>
+        <button class="delete-btn" data-id="${quest.id}">Delete</button>
       </div>
     `;
     questsListEl.appendChild(questEl);
+  });
+  
+  // Add event listeners to the buttons
+  document.querySelectorAll('.quest-actions .complete-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const id = parseInt(e.target.getAttribute('data-id'));
+      toggleQuest(id);
+    });
+  });
+  
+  document.querySelectorAll('.quest-actions .delete-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const id = parseInt(e.target.getAttribute('data-id'));
+      deleteQuest(id);
+    });
   });
 }
 
@@ -509,12 +533,20 @@ function renderJournalEntries() {
         </div>
         <div>
           ${entry.isPrivate ? '<span class="private-badge">Private</span>' : ''}
-          <button onclick="deleteJournalEntry(${entry.id})">Delete</button>
+          <button class="delete-btn" data-id="${entry.id}">Delete</button>
         </div>
       </div>
       <div class="journal-entry-content">${entry.content}</div>
     `;
     journalEntriesEl.appendChild(entryEl);
+  });
+  
+  // Add event listeners to the delete buttons
+  document.querySelectorAll('.journal-entry .delete-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const id = parseInt(e.target.getAttribute('data-id'));
+      deleteJournalEntry(id);
+    });
   });
 }
 
@@ -598,10 +630,18 @@ function renderRewards() {
       </div>
       <div class="reward-description">${reward.description}</div>
       <div class="reward-actions">
-        <button onclick="deleteReward(${reward.id})">Delete</button>
+        <button class="delete-btn" data-id="${reward.id}">Delete</button>
       </div>
     `;
     rewardsListEl.appendChild(rewardEl);
+  });
+  
+  // Add event listeners to the delete buttons
+  document.querySelectorAll('.reward-actions .delete-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const id = parseInt(e.target.getAttribute('data-id'));
+      deleteReward(id);
+    });
   });
 }
 
@@ -686,7 +726,7 @@ function renderVictories() {
           <div class="victory-title">${victory.title}</div>
           <div class="victory-date">${victory.timestamp}</div>
         </div>
-        <button onclick="deleteVictory(${victory.id})">Delete</button>
+        <button class="delete-btn" data-id="${victory.id}">Delete</button>
       </div>
       <div class="victory-details">
         <span class="victory-attribute ${victory.attribute}-badge">${getAttributeName(victory.attribute)}</span>
@@ -694,6 +734,14 @@ function renderVictories() {
       </div>
     `;
     victoriesListEl.appendChild(victoryEl);
+  });
+  
+  // Add event listeners to the delete buttons
+  document.querySelectorAll('.victory-card .delete-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const id = parseInt(e.target.getAttribute('data-id'));
+      deleteVictory(id);
+    });
   });
 }
 
