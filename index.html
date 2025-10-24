@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solo Leveling - Productivity Quest</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="title">Solo Leveling Quest</h1>
+            <nav class="navbar">
+                <ul class="nav-links">
+                    <li><a href="#" class="nav-link active" data-page="dashboard">Dashboard</a></li>
+                    <li><a href="#" class="nav-link" data-page="pomodoro">Pomodoro Timer</a></li>
+                    <li><a href="#" class="nav-link" data-page="journal">Journal</a></li>
+                    <li><a href="#" class="nav-link" data-page="rewards">Rewards</a></li>
+                    <li><a href="#" class="nav-link" data-page="hall">Hall of Shadows</a></li>
+                    <li><a href="#" class="nav-link" data-page="progress">Progress</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <section id="dashboard" class="page active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Level</h3>
+                        <p class="stat-value" id="user-level">1</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total XP</h3>
+                        <p class="stat-value" id="total-xp">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Quests Completed</h3>
+                        <p class="stat-value" id="quests-completed">0/0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Streak</h3>
+                        <p class="stat-value" id="streak">0 days</p>
+                    </div>
+                </div>
+
+                <div class="content-grid">
+                    <div class="quest-section">
+                        <h2>Today's Quests</h2>
+                        <div class="quest-form">
+                            <input type="text" id="quest-title" placeholder="Quest title">
+                            <select id="quest-attribute">
+                                <option value="strength">Strength</option>
+                                <option value="charisma">Charisma</option>
+                                <option value="intelligence">Intelligence</option>
+                                <option value="wisdom">Wisdom</option>
+                            </select>
+                            <input type="number" id="quest-xp" placeholder="XP" min="1">
+                            <button id="add-quest">Add Quest</button>
+                        </div>
+                        <div class="quests-list" id="quests-list">
+                            <!-- Quests will be added here dynamically -->
+                        </div>
+                    </div>
+
+                    <div class="attributes-section">
+                        <h2>Attributes</h2>
+                        <div class="attributes-container">
+                            <div class="attribute-bar">
+                                <div class="attribute-info">
+                                    <span class="attribute-name">Strength</span>
+                                    <span class="attribute-value" id="strength-value">0</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill strength-fill" id="strength-progress"></div>
+                                </div>
+                            </div>
+                            <div class="attribute-bar">
+                                <div class="attribute-info">
+                                    <span class="attribute-name">Charisma</span>
+                                    <span class="attribute-value" id="charisma-value">0</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill charisma-fill" id="charisma-progress"></div>
+                                </div>
+                            </div>
+                            <div class="attribute-bar">
+                                <div class="attribute-info">
+                                    <span class="attribute-name">Intelligence</span>
+                                    <span class="attribute-value" id="intelligence-value">0</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill intelligence-fill" id="intelligence-progress"></div>
+                                </div>
+                            </div>
+                            <div class="attribute-bar">
+                                <div class="attribute-info">
+                                    <span class="attribute-name">Wisdom</span>
+                                    <span class="attribute-value" id="wisdom-value">0</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill wisdom-fill" id="wisdom-progress"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pomodoro Timer Page -->
+            <section id="pomodoro" class="page">
+                <h2>Pomodoro Timer</h2>
+                <div class="timer-container">
+                    <div class="timer-display">
+                        <div class="timer-mode" id="timer-mode">Work Time</div>
+                        <div class="timer" id="timer">25:00</div>
+                        <div class="timer-controls">
+                            <button id="start-pause">Start</button>
+                            <button id="reset-timer">Reset</button>
+                        </div>
+                    </div>
+                    <div class="timer-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="timer-progress"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="completed-pomodoros">
+                    <h3>Completed Pomodoros</h3>
+                    <p class="stat-value" id="pomodoro-count">0</p>
+                </div>
+            </section>
+
+            <!-- Journal Page -->
+            <section id="journal" class="page">
+                <h2>Journal</h2>
+                <div class="journal-form">
+                    <input type="text" id="journal-title" placeholder="Entry title">
+                    <textarea id="journal-content" placeholder="Write your thoughts here..."></textarea>
+                    <div class="journal-options">
+                        <label>
+                            <input type="checkbox" id="journal-private"> Private entry
+                        </label>
+                        <button id="save-journal">Save Entry</button>
+                    </div>
+                </div>
+                <div class="journal-entries" id="journal-entries">
+                    <!-- Journal entries will be added here dynamically -->
+                </div>
+            </section>
+
+            <!-- Rewards Page -->
+            <section id="rewards" class="page">
+                <h2>Create Rewards</h2>
+                <div class="reward-form">
+                    <input type="text" id="reward-name" placeholder="Reward name">
+                    <textarea id="reward-description" placeholder="Reward description"></textarea>
+                    <input type="number" id="reward-xp" placeholder="XP Threshold" min="1">
+                    <button id="create-reward">Create Reward</button>
+                </div>
+                <div class="rewards-list" id="rewards-list">
+                    <!-- Rewards will be added here dynamically -->
+                </div>
+            </section>
+
+            <!-- Hall of Shadows Page -->
+            <section id="hall" class="page">
+                <h2>Hall of Shadows</h2>
+                <div class="victory-form">
+                    <input type="text" id="victory-title" placeholder="Victory title">
+                    <select id="victory-attribute">
+                        <option value="strength">Strength</option>
+                        <option value="charisma">Charisma</option>
+                        <option value="intelligence">Intelligence</option>
+                        <option value="wisdom">Wisdom</option>
+                    </select>
+                    <input type="number" id="victory-xp" placeholder="XP Gained" min="1">
+                    <button id="record-victory">Record Victory</button>
+                </div>
+                <div class="victories-list" id="victories-list">
+                    <!-- Victories will be added here dynamically -->
+                </div>
+            </section>
+
+            <!-- Progress Page -->
+            <section id="progress" class="page">
+                <h2>Progress Overview</h2>
+                <div class="progress-stats">
+                    <div class="stat-card">
+                        <h3>Current Level</h3>
+                        <p class="stat-value" id="progress-level">1</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total XP</h3>
+                        <p class="stat-value" id="progress-xp">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>XP to Next Level</h3>
+                        <p class="stat-value" id="xp-to-next">100</p>
+                    </div>
+                </div>
+                <div class="charts-container">
+                    <div class="chart-placeholder">
+                        <h3>XP Gain Over Time</h3>
+                        <div class="chart" id="xp-chart">
+                            <!-- Chart will be rendered here -->
+                            <p>Chart visualization would appear here</p>
+                        </div>
+                    </div>
+                    <div class="chart-placeholder">
+                        <h3>Attribute Distribution</h3>
+                        <div class="chart" id="attribute-chart">
+                            <!-- Chart will be rendered here -->
+                            <p>Chart visualization would appear here</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
