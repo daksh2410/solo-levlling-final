@@ -1,4 +1,8 @@
-// Solo Leveling Productivity App
+// Solo Leveling Productivity App with Firebase Integration
+// Firebase initialization
+let firebaseApp, firebaseAuth, firebaseDB, firebaseFunctions;
+let unsubscribeQuests, unsubscribeJournal, unsubscribeRewards, unsubscribeVictories;
+
 // Data structures
 let userStats = {
   level: 1,
@@ -17,6 +21,7 @@ let journalEntries = [];
 let rewards = [];
 let victories = [];
 let pomodoroCount = 0;
+let currentUser = null;
 
 // DOM Elements
 const pageLinks = document.querySelectorAll('.nav-link');
@@ -84,19 +89,42 @@ let isRunning = false;
 let isWorkMode = true;
 
 // Initialize the app
-document.addEventListener('DOMContentLoaded', () => {
-  loadFromLocalStorage();
-  updateDashboard();
-  updatePomodoroDisplay();
-  renderQuests();
-  renderJournalEntries();
-  renderRewards();
-  renderVictories();
-  updateProgressPage();
-  
-  // Set up event listeners
-  setupEventListeners();
-});
+function initializeApp() {
+  // Wait for Firebase to be loaded
+  if (typeof window.firebaseFunctions !== 'undefined') {
+    firebaseApp = window.firebaseApp;
+    firebaseAuth = window.firebaseAuth;
+    firebaseDB = window.firebaseDB;
+    firebaseFunctions = window.firebaseFunctions;
+    
+    // Set up authentication state listener
+    firebaseFunctions.onAuthStateChanged(firebaseAuth, (user) => {
+      if (user) {
+        currentUser = user;
+        // Load data from Firestore
+        loadFromFirestore();
+      } else {
+        // Sign in anonymously
+        firebaseFunctions.signInAnonymously(firebaseAuth).catch((error) => {
+          console.error('Anonymous sign-in error:', error);
+        });
+      }
+    });
+  } else {
+    console.warn('Firebase not loaded, using localStorage');
+    loadFromLocalStorage();
+    updateDashboard();
+    updatePomodoroDisplay();
+    renderQuests();
+    renderJournalEntries();
+    renderRewards();
+    renderVictories();
+    updateProgressPage();
+    
+    // Set up event listeners
+    setupEventListeners();
+  }
+}
 
 // Set up event listeners
 function setupEventListeners() {
@@ -168,23 +196,43 @@ function updateDashboard() {
   questsCompletedEl.textContent = `${completedQuests}/${quests.length}`;
 }
 
-function addQuest() {
+async function addQuest() {
   const title = questTitleEl.value.trim();
   const attribute = questAttributeEl.value;
   const xp = parseInt(questXPEl.value);
   
   if (title && !isNaN(xp) && xp > 0) {
-    const quest = {
-      id: Date.now(),
-      title,
-      attribute,
-      xp,
-      completed: false
-    };
-    
-    quests.push(quest);
-    renderQuests();
-    saveToLocalStorage();
+    if (currentUser) {
+      // Save to Firestore
+      try {
+        const docRef = await firebaseFunctions.addDoc(
+          firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'quests'),
+          {
+            title,
+            attribute,
+            xp,
+            completed: false,
+            createdAt: new Date()
+          }
+        );
+        console.log('Quest added with ID: ', docRef.id);
+      } catch (error) {
+        console.error('Error adding quest: ', error);
+      }
+    } else {
+      // Fallback to localStorage
+      const quest = {
+        id: Date.now(),
+        title,
+        attribute,
+        xp,
+        completed: false
+      };
+      
+      quests.push(quest);
+      renderQuests();
+      saveToLocalStorage();
+    }
     
     // Clear form
     questTitleEl.value = '';
@@ -222,34 +270,81 @@ function renderQuests() {
   });
 }
 
-function toggleQuest(id) {
-  const quest = quests.find(q => q.id === id);
-  if (quest) {
-    quest.completed = !quest.completed;
-    
-    if (quest.completed) {
-      // Add XP and attribute points
-      userStats.totalXP += quest.xp;
-      userStats.attributes[quest.attribute] += quest.xp;
-      userStats.level = calculateLevel(userStats.totalXP);
-    } else {
-      // Remove XP and attribute points
-      userStats.totalXP -= quest.xp;
-      userStats.attributes[quest.attribute] -= quest.xp;
-      userStats.level = calculateLevel(userStats.totalXP);
+async function toggleQuest(id) {
+  if (currentUser) {
+    // Update in Firestore
+    try {
+      const questRef = firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'quests', id);
+      const quest = quests.find(q => q.id === id);
+      
+      if (quest) {
+        const newCompletedStatus = !quest.completed;
+        await firebaseFunctions.updateDoc(questRef, {
+          completed: newCompletedStatus
+        });
+        
+        // Update local stats
+        if (newCompletedStatus) {
+          // Add XP and attribute points
+          userStats.totalXP += quest.xp;
+          userStats.attributes[quest.attribute] += quest.xp;
+          userStats.level = calculateLevel(userStats.totalXP);
+        } else {
+          // Remove XP and attribute points
+          userStats.totalXP -= quest.xp;
+          userStats.attributes[quest.attribute] -= quest.xp;
+          userStats.level = calculateLevel(userStats.totalXP);
+        }
+        
+        updateDashboard();
+        updateProgressPage();
+        saveToFirestore();
+      }
+    } catch (error) {
+      console.error('Error updating quest: ', error);
     }
-    
-    updateDashboard();
-    renderQuests();
-    updateProgressPage();
-    saveToLocalStorage();
+  } else {
+    // Fallback to localStorage
+    const quest = quests.find(q => q.id === id);
+    if (quest) {
+      quest.completed = !quest.completed;
+      
+      if (quest.completed) {
+        // Add XP and attribute points
+        userStats.totalXP += quest.xp;
+        userStats.attributes[quest.attribute] += quest.xp;
+        userStats.level = calculateLevel(userStats.totalXP);
+      } else {
+        // Remove XP and attribute points
+        userStats.totalXP -= quest.xp;
+        userStats.attributes[quest.attribute] -= quest.xp;
+        userStats.level = calculateLevel(userStats.totalXP);
+      }
+      
+      updateDashboard();
+      renderQuests();
+      updateProgressPage();
+      saveToLocalStorage();
+    }
   }
 }
 
-function deleteQuest(id) {
-  quests = quests.filter(quest => quest.id !== id);
-  renderQuests();
-  saveToLocalStorage();
+async function deleteQuest(id) {
+  if (currentUser) {
+    // Delete from Firestore
+    try {
+      await firebaseFunctions.deleteDoc(
+        firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'quests', id)
+      );
+    } catch (error) {
+      console.error('Error deleting quest: ', error);
+    }
+  } else {
+    // Fallback to localStorage
+    quests = quests.filter(quest => quest.id !== id);
+    renderQuests();
+    saveToLocalStorage();
+  }
 }
 
 function getAttributeName(attribute) {
@@ -293,6 +388,13 @@ function startTimer() {
       if (isWorkMode) {
         // Work session completed
         pomodoroCount++;
+        if (currentUser) {
+          // Save to Firestore
+          savePomodoroCount();
+        } else {
+          // Save to localStorage
+          saveToLocalStorage();
+        }
         pomodoroCountEl.textContent = pomodoroCount;
         isWorkMode = false;
         timeLeft = 5 * 60; // 5 minutes break
@@ -322,6 +424,13 @@ function resetTimer() {
   timeLeft = 25 * 60;
   timerModeEl.textContent = 'Work Time';
   updatePomodoroDisplay();
+  
+  // Save to Firebase or localStorage
+  if (currentUser) {
+    savePomodoroCount();
+  } else {
+    saveToLocalStorage();
+  }
 }
 
 function updatePomodoroDisplay() {
@@ -336,23 +445,43 @@ function updatePomodoroDisplay() {
 }
 
 // Journal Functions
-function saveJournalEntry() {
+async function saveJournalEntry() {
   const title = journalTitleEl.value.trim();
   const content = journalContentEl.value.trim();
   
   if (title && content) {
-    const entry = {
-      id: Date.now(),
-      title,
-      content,
-      isPrivate: journalPrivateEl.checked,
-      date: new Date().toISOString(),
-      timestamp: new Date().toLocaleString()
-    };
-    
-    journalEntries.unshift(entry); // Add to beginning
-    renderJournalEntries();
-    saveToLocalStorage();
+    if (currentUser) {
+      // Save to Firestore
+      try {
+        const docRef = await firebaseFunctions.addDoc(
+          firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'journal'),
+          {
+            title,
+            content,
+            isPrivate: journalPrivateEl.checked,
+            date: new Date().toISOString(),
+            timestamp: new Date().toLocaleString()
+          }
+        );
+        console.log('Journal entry added with ID: ', docRef.id);
+      } catch (error) {
+        console.error('Error adding journal entry: ', error);
+      }
+    } else {
+      // Fallback to localStorage
+      const entry = {
+        id: Date.now(),
+        title,
+        content,
+        isPrivate: journalPrivateEl.checked,
+        date: new Date().toISOString(),
+        timestamp: new Date().toLocaleString()
+      };
+      
+      journalEntries.unshift(entry); // Add to beginning
+      renderJournalEntries();
+      saveToLocalStorage();
+    }
     
     // Clear form
     journalTitleEl.value = '';
@@ -389,29 +518,60 @@ function renderJournalEntries() {
   });
 }
 
-function deleteJournalEntry(id) {
-  journalEntries = journalEntries.filter(entry => entry.id !== id);
-  renderJournalEntries();
-  saveToLocalStorage();
+async function deleteJournalEntry(id) {
+  if (currentUser) {
+    // Delete from Firestore
+    try {
+      await firebaseFunctions.deleteDoc(
+        firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'journal', id)
+      );
+    } catch (error) {
+      console.error('Error deleting journal entry: ', error);
+    }
+  } else {
+    // Fallback to localStorage
+    journalEntries = journalEntries.filter(entry => entry.id !== id);
+    renderJournalEntries();
+    saveToLocalStorage();
+  }
 }
 
 // Rewards Functions
-function createReward() {
+async function createReward() {
   const name = rewardNameEl.value.trim();
   const description = rewardDescriptionEl.value.trim();
   const xp = parseInt(rewardXPEl.value);
   
   if (name && description && !isNaN(xp) && xp > 0) {
-    const reward = {
-      id: Date.now(),
-      name,
-      description,
-      xpThreshold: xp
-    };
-    
-    rewards.push(reward);
-    renderRewards();
-    saveToLocalStorage();
+    if (currentUser) {
+      // Save to Firestore
+      try {
+        const docRef = await firebaseFunctions.addDoc(
+          firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'rewards'),
+          {
+            name,
+            description,
+            xpThreshold: xp,
+            createdAt: new Date()
+          }
+        );
+        console.log('Reward added with ID: ', docRef.id);
+      } catch (error) {
+        console.error('Error adding reward: ', error);
+      }
+    } else {
+      // Fallback to localStorage
+      const reward = {
+        id: Date.now(),
+        name,
+        description,
+        xpThreshold: xp
+      };
+      
+      rewards.push(reward);
+      renderRewards();
+      saveToLocalStorage();
+    }
     
     // Clear form
     rewardNameEl.value = '';
@@ -445,31 +605,63 @@ function renderRewards() {
   });
 }
 
-function deleteReward(id) {
-  rewards = rewards.filter(reward => reward.id !== id);
-  renderRewards();
-  saveToLocalStorage();
+async function deleteReward(id) {
+  if (currentUser) {
+    // Delete from Firestore
+    try {
+      await firebaseFunctions.deleteDoc(
+        firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'rewards', id)
+      );
+    } catch (error) {
+      console.error('Error deleting reward: ', error);
+    }
+  } else {
+    // Fallback to localStorage
+    rewards = rewards.filter(reward => reward.id !== id);
+    renderRewards();
+    saveToLocalStorage();
+  }
 }
 
 // Victories Functions
-function recordVictory() {
+async function recordVictory() {
   const title = victoryTitleEl.value.trim();
   const attribute = victoryAttributeEl.value;
   const xp = parseInt(victoryXPEl.value);
   
   if (title && !isNaN(xp) && xp > 0) {
-    const victory = {
-      id: Date.now(),
-      title,
-      attribute,
-      xp,
-      date: new Date().toISOString(),
-      timestamp: new Date().toLocaleDateString()
-    };
-    
-    victories.unshift(victory); // Add to beginning
-    renderVictories();
-    saveToLocalStorage();
+    if (currentUser) {
+      // Save to Firestore
+      try {
+        const docRef = await firebaseFunctions.addDoc(
+          firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'victories'),
+          {
+            title,
+            attribute,
+            xp,
+            date: new Date().toISOString(),
+            timestamp: new Date().toLocaleDateString()
+          }
+        );
+        console.log('Victory recorded with ID: ', docRef.id);
+      } catch (error) {
+        console.error('Error recording victory: ', error);
+      }
+    } else {
+      // Fallback to localStorage
+      const victory = {
+        id: Date.now(),
+        title,
+        attribute,
+        xp,
+        date: new Date().toISOString(),
+        timestamp: new Date().toLocaleDateString()
+      };
+      
+      victories.unshift(victory); // Add to beginning
+      renderVictories();
+      saveToLocalStorage();
+    }
     
     // Clear form
     victoryTitleEl.value = '';
@@ -505,10 +697,22 @@ function renderVictories() {
   });
 }
 
-function deleteVictory(id) {
-  victories = victories.filter(victory => victory.id !== id);
-  renderVictories();
-  saveToLocalStorage();
+async function deleteVictory(id) {
+  if (currentUser) {
+    // Delete from Firestore
+    try {
+      await firebaseFunctions.deleteDoc(
+        firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'victories', id)
+      );
+    } catch (error) {
+      console.error('Error deleting victory: ', error);
+    }
+  } else {
+    // Fallback to localStorage
+    victories = victories.filter(victory => victory.id !== id);
+    renderVictories();
+    saveToLocalStorage();
+  }
 }
 
 // Progress Page Functions
@@ -524,7 +728,129 @@ function calculateXPToNextLevel(currentXP) {
   return nextLevelXP - currentXP;
 }
 
-// Local Storage Functions
+// Firestore Functions
+async function loadFromFirestore() {
+  if (!currentUser) return;
+  
+  try {
+    // Load user stats
+    const statsQuery = firebaseFunctions.query(
+      firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'stats'),
+      firebaseFunctions.orderBy('timestamp', 'desc'),
+      firebaseFunctions.limit(1)
+    );
+    
+    const statsSnapshot = await firebaseFunctions.getDocs(statsQuery);
+    if (!statsSnapshot.empty) {
+      userStats = statsSnapshot.docs[0].data();
+    }
+    
+    // Load pomodoro count
+    const pomodoroDoc = await firebaseFunctions.getDoc(
+      firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'stats', 'pomodoro')
+    );
+    
+    if (pomodoroDoc.exists()) {
+      pomodoroCount = pomodoroDoc.data().count;
+      pomodoroCountEl.textContent = pomodoroCount;
+    }
+    
+    // Set up real-time listeners for all collections
+    setupRealtimeListeners();
+    
+    // Update UI
+    updateDashboard();
+    updatePomodoroDisplay();
+    updateProgressPage();
+    
+    // Set up event listeners
+    setupEventListeners();
+  } catch (error) {
+    console.error('Error loading data from Firestore:', error);
+    // Fallback to localStorage
+    loadFromLocalStorage();
+  }
+}
+
+function setupRealtimeListeners() {
+  if (!currentUser) return;
+  
+  // Quests listener
+  const questsQuery = firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'quests');
+  unsubscribeQuests = firebaseFunctions.onSnapshot(questsQuery, (snapshot) => {
+    quests = [];
+    snapshot.forEach((doc) => {
+      quests.push({ id: doc.id, ...doc.data() });
+    });
+    renderQuests();
+  });
+  
+  // Journal entries listener
+  const journalQuery = firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'journal');
+  unsubscribeJournal = firebaseFunctions.onSnapshot(journalQuery, (snapshot) => {
+    journalEntries = [];
+    snapshot.forEach((doc) => {
+      journalEntries.push({ id: doc.id, ...doc.data() });
+    });
+    // Sort by timestamp (newest first)
+    journalEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+    renderJournalEntries();
+  });
+  
+  // Rewards listener
+  const rewardsQuery = firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'rewards');
+  unsubscribeRewards = firebaseFunctions.onSnapshot(rewardsQuery, (snapshot) => {
+    rewards = [];
+    snapshot.forEach((doc) => {
+      rewards.push({ id: doc.id, ...doc.data() });
+    });
+    renderRewards();
+  });
+  
+  // Victories listener
+  const victoriesQuery = firebaseFunctions.collection(firebaseDB, 'users', currentUser.uid, 'victories');
+  unsubscribeVictories = firebaseFunctions.onSnapshot(victoriesQuery, (snapshot) => {
+    victories = [];
+    snapshot.forEach((doc) => {
+      victories.push({ id: doc.id, ...doc.data() });
+    });
+    // Sort by timestamp (newest first)
+    victories.sort((a, b) => new Date(b.date) - new Date(a.date));
+    renderVictories();
+  });
+}
+
+async function saveToFirestore() {
+  if (!currentUser) return;
+  
+  try {
+    // Save user stats
+    const statsRef = firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'stats', 'current');
+    await firebaseFunctions.setDoc(statsRef, {
+      ...userStats,
+      timestamp: new Date()
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error saving to Firestore:', error);
+  }
+}
+
+async function savePomodoroCount() {
+  if (!currentUser) return;
+  
+  try {
+    // Save pomodoro count
+    const pomodoroRef = firebaseFunctions.doc(firebaseDB, 'users', currentUser.uid, 'stats', 'pomodoro');
+    await firebaseFunctions.setDoc(pomodoroRef, {
+      count: pomodoroCount,
+      timestamp: new Date()
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error saving pomodoro count to Firestore:', error);
+  }
+}
+
+// Local Storage Functions (fallback)
 function saveToLocalStorage() {
   const data = {
     userStats,

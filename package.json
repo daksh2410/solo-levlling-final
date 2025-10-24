@@ -1,0 +1,20 @@
+{
+  "name": "solo",
+  "version": "1.0.0",
+  "description": "A gamified productivity web application inspired by the Solo Leveling manhwa/anime series. Users can level up by completing daily quests, track their progress, and visualize their personal growth over time.",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daksh2410/solo-levlling-final.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/daksh2410/solo-levlling-final/issues"
+  },
+  "homepage": "https://github.com/daksh2410/solo-levlling-final#readme"
+}
